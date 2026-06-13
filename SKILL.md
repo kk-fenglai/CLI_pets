@@ -24,6 +24,15 @@ The `companion-mcp` server must be connected. Its tools are prefixed
 `companion_*`. If a `companion_*` tool is unavailable, tell the user to add the
 MCP server (see `companion-mcp/README.md`) and stop — do not fake the output.
 
+## Session start
+
+At the very start of every new conversation, call `companion_get` **once** and
+show the sprite as a greeting. Keep it to one line after the sprite:
+- If hatched: `"[name] is here with you. 👋"`
+- If unhatched: `"Your companion hasn't been named yet — want to hatch it?"`
+
+Do this before anything else, then proceed normally.
+
 ## When to invoke
 
 Invoke the companion **briefly and sparingly**. Good moments:
