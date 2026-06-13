@@ -1,0 +1,55 @@
+{
+  "name": "companion-mcp",
+  "version": "1.0.0",
+  "description": "A terminal companion pet for Claude Code — deterministic gacha creatures with rarities, stats and ASCII sprites, exposed as an MCP server.",
+  "type": "module",
+  "bin": {
+    "companion-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "claude-code",
+    "companion",
+    "pet",
+    "cli",
+    "gacha",
+    "ascii"
+  ],
+  "author": "kk-fenglai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kk-fenglai/CLI_pets.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kk-fenglai/CLI_pets/issues"
+  },
+  "homepage": "https://github.com/kk-fenglai/CLI_pets#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}
