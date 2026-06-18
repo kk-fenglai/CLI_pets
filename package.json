@@ -1,6 +1,6 @@
 {
   "name": "companion-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A terminal companion pet for Claude Code — deterministic gacha creatures with rarities, stats and ASCII sprites, exposed as an MCP server.",
   "type": "module",
   "bin": {

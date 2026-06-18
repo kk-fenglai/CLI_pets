@@ -1,8 +1,8 @@
 # companion-mcp 🦆
 
-一个给 **Claude Code**（以及任何支持 MCP 的客户端）用的终端**桌宠系统**。
+A terminal **desk-pet system** for **Claude Code** (and any MCP-capable client).
 
-每个人会根据自己的 seed **确定性**地抽到一只独一无二的小生物：物种、稀有度、帽子、眼睛、属性全部由 seed 哈希决定，改配置文件也伪造不出传说级。灵感来自本仓库对某 Agent CLI 泄露源码的分析（`buddy/` Companion 系统），**全部代码为独立重写实现**。
+Each user gets a unique creature **deterministically** from their seed: species, rarity, hat, eyes, and stats all come from a hash of the seed — tampering with the config file cannot fake a legendary pull. Inspired by this repo's analysis of a leaked Agent CLI (`buddy/` Companion system); **all code is an independent reimplementation**.
 
 ```
     __
@@ -12,16 +12,16 @@
 duck  —  ★ common
 ```
 
-## 特性
+## Features
 
-- 🎲 **确定性抽卡**：同一个 seed 永远是同一只。稀有度权重 common 60 / uncommon 25 / rare 10 / epic 4 / legendary 1。
-- ✨ **1% 闪光（shiny）**几率。
-- 🐾 **18 种物种**：duck、goose、blob、cat、dragon、octopus、owl、penguin、turtle、snail、ghost、axolotl、capybara、cactus、robot、rabbit、mushroom、chonk。
-- 🎩 帽子（crown / tophat / wizard / halo …）、眼睛样式、5 项属性（DEBUGGING / PATIENCE / CHAOS / WISDOM / SNARK）。
-- 🖼️ 多帧 idle 动画的 ASCII 精灵。
-- 💾 本地持久化（名字 / 性格 / 抚摸次数），数据只存在你本机。
+- 🎲 **Deterministic gacha**: the same seed always yields the same creature. Rarity weights: common 60 / uncommon 25 / rare 10 / epic 4 / legendary 1.
+- ✨ **1% shiny** chance.
+- 🐾 **18 species**: duck, goose, blob, cat, dragon, octopus, owl, penguin, turtle, snail, ghost, axolotl, capybara, cactus, robot, rabbit, mushroom, chonk.
+- 🎩 Hats (crown / tophat / wizard / halo …), eye styles, and 5 stats (DEBUGGING / PATIENCE / CHAOS / WISDOM / SNARK).
+- 🖼️ Multi-frame idle ASCII sprites.
+- 💾 Local persistence (name / personality / pet count); data stays on your machine only.
 
-## 安装与构建
+## Install & build
 
 ```powershell
 cd companion-mcp
@@ -29,19 +29,19 @@ npm install
 npm run build
 ```
 
-构建产物在 `dist/`，入口是 `dist/index.js`。
+Build output lives in `dist/`; entry point is `dist/index.js`.
 
-## 在 Claude Code 中接入
+## Connect in Claude Code
 
-### 方式 A：npx（推荐，免克隆 / 免构建）
+### Option A: npx (recommended — no clone / no build)
 
-发布到 npm 后，任何人都可以直接用：
+After publishing to npm, anyone can run:
 
 ```powershell
 claude mcp add companion -- npx -y companion-mcp
 ```
 
-或在项目根目录的 `.mcp.json` 中：
+Or in a project-root `.mcp.json`:
 
 ```jsonc
 {
@@ -54,74 +54,97 @@ claude mcp add companion -- npx -y companion-mcp
 }
 ```
 
-也可以直接从 GitHub 仓库运行（无需发布 npm）：
+You can also run directly from GitHub (no npm publish needed):
 
 ```powershell
 claude mcp add companion -- npx -y github:kk-fenglai/CLI_pets
 ```
 
-### 方式 B：本地路径（开发调试）
+### Option B: local path (development)
 
-在你的项目根目录创建 `.mcp.json`：
+Create `.mcp.json` in your project root:
 
 ```jsonc
 {
   "mcpServers": {
     "companion": {
       "command": "node",
-      "args": ["绝对路径/companion-mcp/dist/index.js"]
+      "args": ["/absolute/path/to/companion-mcp/dist/index.js"]
     }
   }
 }
 ```
 
-或命令行添加：
+Or add via CLI:
 
 ```powershell
-claude mcp add companion -- node "绝对路径/companion-mcp/dist/index.js"
+claude mcp add companion -- node "/absolute/path/to/companion-mcp/dist/index.js"
 ```
 
-加好后在 Claude Code 里直接说：
+Once connected, try in Claude Code:
 
-- “看看我的宠物” → 调用 `companion_get`
-- “给它取名叫 Ducky，性格毒舌” → `companion_hatch`
-- “摸摸它” → `companion_pet`
-- “看它的属性” → `companion_stats`
+- "Show my pet" → `companion_get`
+- "Name it Ducky, make it snarky" → `companion_hatch`
+- "Pet it" → `companion_pet`
+- "Show its stats" → `companion_stats`
 
-## 提供的工具（MCP Tools）
+## MCP tools
 
-| 工具 | 作用 |
-|------|------|
-| `companion_get` | 显示宠物的精灵图、物种、稀有度、属性 |
-| `companion_hatch` | 给宠物起名字 / 设定性格 |
-| `companion_pet` | 抚摸宠物，返回爱心动画与反应 |
-| `companion_stats` | 详细属性条与总分 |
-| `companion_render` | 渲染指定动画帧（自建动画用） |
-| `companion_reroll` | 更换 seed，重抽一只新生物（会重置名字） |
-| `companion_info` | 查看配置路径与当前 seed |
+| Tool | Purpose |
+|------|---------|
+| `companion_get` | Show sprite, species, rarity, and stats |
+| `companion_hatch` | Name the pet / set personality |
+| `companion_pet` | Pet the creature; returns hearts animation and a reaction |
+| `companion_stats` | Detailed stat bars and total score |
+| `companion_render` | Render a specific animation frame (for custom loops) |
+| `companion_reroll` | Change seed and roll a new creature (resets name) |
+| `companion_info` | Show config path and current seed |
 
-## 配置
+## MCP prompts
 
-| 环境变量 | 说明 |
-|----------|------|
-| `COMPANION_MCP_DIR` | 配置目录，默认 `~/.companion-mcp` |
+| Prompt | Purpose |
+|--------|---------|
+| `companion-session` | **Wake the pet at the start of every new conversation.** Show sprite + one greeting line before handling the user request. |
+| `companion-voice` | **Summon the pet to speak.** Use when the user @-mentions their companion by name (e.g. `@Ducky hey`). Pass optional `mention` and `message` args. |
 
-seed 默认取 `用户名@主机名`，保证每台机器每个用户稳定且唯一。想换一只就用 `companion_reroll`，可传自定义 seed。
+## MCP resources
 
-## 项目结构
+| URI | Purpose |
+|-----|---------|
+| `companion://profile` | Live desk-pet profile (sprite, stats). Read at session start; always up to date on read. |
+
+## Session-start behavior
+
+When the MCP server connects, it sends **server instructions** to the client
+(Claude Code injects these into `mcp_instructions`). They require waking the
+pet on the first turn of every conversation via `companion_get`, `companion-session`,
+or `companion://profile`.
+
+## Configuration
+
+| Environment variable | Description |
+|------------------------|-------------|
+| `COMPANION_MCP_DIR` | Config directory; default `~/.companion-mcp` |
+
+The default seed is `username@hostname`, stable and unique per user per machine. Use `companion_reroll` (optionally with a custom seed) to get a new creature.
+
+## Project layout
 
 ```
 companion-mcp/
 ├── package.json
 ├── tsconfig.json
 └── src/
-    ├── types.ts       # 稀有度 / 物种 / 帽子 / 属性 类型与权重
-    ├── sprites.ts     # 18 种 ASCII 精灵 + 渲染/脸部函数
-    ├── companion.ts   # 确定性生成（seeded PRNG + 抽卡）
-    ├── store.ts       # 本地持久化
-    └── index.ts       # MCP 服务器入口（stdio）
+    ├── types.ts       # rarity / species / hat / stat types and weights
+    ├── sprites.ts     # 18 ASCII sprites + render/face helpers
+    ├── companion.ts   # deterministic generation (seeded PRNG + gacha)
+    ├── store.ts       # local persistence
+    ├── profile.ts     # shared profile text + greeting helpers
+    ├── session.ts     # server instructions + companion-session prompt
+    ├── prompts.ts     # companion-voice MCP prompt builder
+    └── index.ts       # MCP server entry (stdio)
 ```
 
-## 许可
+## License
 
-MIT。ASCII 造型与玩法设计参考自公开的源码分析资料，代码为独立实现，仅供学习与个人使用。
+MIT. ASCII art and gameplay design are informed by publicly available source-analysis material; code is an independent implementation for learning and personal use.

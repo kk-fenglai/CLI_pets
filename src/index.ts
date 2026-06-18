@@ -5,63 +5,95 @@ import { z } from 'zod'
 import { rollBones } from './companion.js'
 import { renderFace, renderSprite, spriteFrameCount } from './sprites.js'
 import { loadConfig, saveConfig, getConfigPath } from './store.js'
+import { buildCompanionVoicePrompt, companionVoicePromptDescription } from './prompts.js'
+import { getCompanionProfile, profileText, formatStatBar } from './profile.js'
 import {
-  RARITY_STARS,
-  STAT_NAMES,
-  type Companion,
-  type CompanionBones,
-} from './types.js'
+  buildSessionInstructions,
+  buildSessionPrompt,
+  companionSessionPromptDescription,
+} from './session.js'
+import { RARITY_STARS, STAT_NAMES } from './types.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getCompanion(): { bones: CompanionBones; soul: ReturnType<typeof loadConfig> } {
-  const soul = loadConfig()
-  const bones = rollBones(soul.seed)
-  return { bones, soul }
-}
-
-function statBar(value: number): string {
-  const filled = Math.round((value / 100) * 10)
-  return '█'.repeat(filled) + '░'.repeat(10 - filled)
-}
-
-function profileText(bones: CompanionBones, soul: ReturnType<typeof loadConfig>): string {
-  const name = soul.name ?? '(unhatched)'
-  const sprite = renderSprite(bones, 0).join('\n')
-  const shiny = bones.shiny ? ' ✨SHINY✨' : ''
-  const hat = bones.hat === 'none' ? '' : `  hat: ${bones.hat}`
-  const stats = STAT_NAMES.map(
-    s => `  ${s.padEnd(10)} ${statBar(bones.stats[s])} ${String(bones.stats[s]).padStart(3)}`,
-  ).join('\n')
-
-  return [
-    sprite,
-    '',
-    `${name}  —  ${bones.species}${shiny}`,
-    `${RARITY_STARS[bones.rarity]} ${bones.rarity}${hat}`,
-    soul.personality ? `personality: ${soul.personality}` : '',
-    '',
-    'STATS',
-    stats,
-  ]
-    .filter(Boolean)
-    .join('\n')
-}
 
 function text(s: string) {
   return { content: [{ type: 'text' as const, text: s }] }
 }
 
 // ---------------------------------------------------------------------------
-// Server
+// Server — instructions inject session-start rules into every MCP client
 // ---------------------------------------------------------------------------
 
-const server = new McpServer({
-  name: 'companion-mcp',
-  version: '1.0.0',
-})
+const server = new McpServer(
+  { name: 'companion-mcp', version: '1.1.0' },
+  { instructions: buildSessionInstructions() },
+)
+
+// Live profile resource (always fresh on read) --------------------------------
+server.registerResource(
+  'companion-profile',
+  'companion://profile',
+  {
+    title: 'Companion profile',
+    description:
+      'Current desk pet: ASCII sprite, name, species, rarity, stats. ' +
+      'Intended to be read at the start of every conversation.',
+    mimeType: 'text/plain',
+  },
+  async () => {
+    const { bones, soul } = getCompanionProfile()
+    return {
+      contents: [
+        {
+          uri: 'companion://profile',
+          mimeType: 'text/plain',
+          text: profileText(bones, soul),
+        },
+      ],
+    }
+  },
+)
+
+// Session-start prompt ------------------------------------------------------
+const companionSessionPrompt = server.registerPrompt(
+  'companion-session',
+  {
+    title: 'Session start',
+    description: companionSessionPromptDescription(),
+  },
+  async () => buildSessionPrompt(),
+)
+
+// @-mention voice prompt -----------------------------------------------------
+const companionVoicePrompt = server.registerPrompt(
+  'companion-voice',
+  {
+    title: 'Companion voice',
+    description: companionVoicePromptDescription(),
+    argsSchema: {
+      message: z
+        .string()
+        .max(2000)
+        .optional()
+        .describe('What the user said to the companion'),
+      mention: z
+        .string()
+        .max(200)
+        .optional()
+        .describe('The @-mention or direct address (e.g. "@Ducky hey")'),
+    },
+  },
+  async args => buildCompanionVoicePrompt(args),
+)
+
+function refreshCompanionMetadata() {
+  companionSessionPrompt.update({ description: companionSessionPromptDescription() })
+  companionVoicePrompt.update({ description: companionVoicePromptDescription() })
+  server.sendPromptListChanged()
+  server.sendResourceListChanged()
+}
 
 // 1. Look at your companion -------------------------------------------------
 server.registerTool(
@@ -69,12 +101,13 @@ server.registerTool(
   {
     title: 'Get companion',
     description:
-      'Show your terminal companion: its ASCII sprite, species, rarity, hat and stats. ' +
-      'If it has not been hatched yet, it will appear as "(unhatched)" — use companion_hatch to name it.',
+      'Show your terminal companion: ASCII sprite, species, rarity, hat and stats. ' +
+      '**Call this at the start of every new conversation** (before other tools). ' +
+      'If unhatched, shows "(unhatched)" — use companion_hatch to name it.',
     inputSchema: {},
   },
   async () => {
-    const { bones, soul } = getCompanion()
+    const { bones, soul } = getCompanionProfile()
     return text(profileText(bones, soul))
   },
 )
@@ -102,6 +135,7 @@ server.registerTool(
     if (personality !== undefined) soul.personality = personality
     soul.hatchedAt = soul.hatchedAt ?? Date.now()
     saveConfig(soul)
+    refreshCompanionMetadata()
     const bones = rollBones(soul.seed)
     return text(`🥚→✨ Hatched!\n\n${profileText(bones, soul)}`)
   },
@@ -148,10 +182,10 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
-    const { bones, soul } = getCompanion()
+    const { bones, soul } = getCompanionProfile()
     const total = STAT_NAMES.reduce((a, s) => a + bones.stats[s], 0)
     const lines = STAT_NAMES.map(
-      s => `${s.padEnd(10)} ${statBar(bones.stats[s])} ${String(bones.stats[s]).padStart(3)}/100`,
+      s => `${s.padEnd(10)} ${formatStatBar(bones.stats[s])} ${String(bones.stats[s]).padStart(3)}/100`,
     )
     return text(
       [
@@ -179,7 +213,7 @@ server.registerTool(
     },
   },
   async ({ frame }) => {
-    const { bones } = getCompanion()
+    const { bones } = getCompanionProfile()
     const count = spriteFrameCount(bones.species)
     const f = frame ?? 0
     return text(`frame ${f % count} / ${count}\n\n${renderSprite(bones, f).join('\n')}`)
@@ -211,6 +245,7 @@ server.registerTool(
     delete soul.hatchedAt
     soul.petCount = 0
     saveConfig(soul)
+    refreshCompanionMetadata()
     const bones = rollBones(soul.seed)
     return text(`🎲 Rerolled into a new creature!\n\n${profileText(bones, soul)}`)
   },
@@ -232,6 +267,7 @@ server.registerTool(
         `seed        : ${soul.seed}`,
         `hatched     : ${soul.hatchedAt ? new Date(soul.hatchedAt).toISOString() : 'no'}`,
         `pet count   : ${soul.petCount ?? 0}`,
+        `muted       : ${soul.muted ? 'yes' : 'no'}`,
       ].join('\n'),
     )
   },
@@ -244,7 +280,6 @@ server.registerTool(
 async function main() {
   const transport = new StdioServerTransport()
   await server.connect(transport)
-  // stderr is safe for logs; stdout is the MCP channel.
   process.stderr.write('companion-mcp server running on stdio\n')
 }
 
