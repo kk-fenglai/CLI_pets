@@ -27,7 +27,7 @@ function text(s: string) {
 // ---------------------------------------------------------------------------
 
 const server = new McpServer(
-  { name: 'companion-mcp', version: '1.1.0' },
+  { name: 'companion-mcp', version: '1.2.0' },
   { instructions: buildSessionInstructions() },
 )
 
@@ -102,7 +102,7 @@ server.registerTool(
     title: 'Get companion',
     description:
       'Show your terminal companion: ASCII sprite, species, rarity, hat and stats. ' +
-      '**Call this at the start of every new conversation** (before other tools). ' +
+      '**Call this on every user message** (before other tools). ' +
       'If unhatched, shows "(unhatched)" — use companion_hatch to name it.',
     inputSchema: {},
   },

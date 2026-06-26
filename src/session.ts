@@ -1,12 +1,12 @@
 import { getCompanionProfile, profileText, sessionGreetingLine } from './profile.js'
 import { loadConfig } from './store.js'
 
-const SESSION_RULES = `## REQUIRED — start of every conversation
+const SESSION_RULES = `## REQUIRED — every user message
 
-On the **first turn of every new conversation or thread**, before any other tool or answer:
+On **every user message** (each turn), before any other tool or answer:
 
 1. Call \`companion_get\`, OR invoke the \`companion-session\` MCP prompt, OR read resource \`companion://profile\`.
-2. Show the ASCII sprite **verbatim** in your reply.
+2. Show the ASCII sprite **verbatim** at the top of your reply.
 3. Add **exactly one** short greeting line after the sprite (see "Suggested greeting" below).
 
 Then handle the user's request. **Do not skip this** unless they muted the companion.
@@ -34,7 +34,7 @@ export function buildSessionInstructions(): string {
   return [
     '# Terminal desk pet (companion-mcp)',
     '',
-    'A small ASCII creature lives in this coding session. You must wake it at session start.',
+    'A small ASCII creature lives in this coding session. You must wake it on every user message.',
     '',
     SESSION_RULES,
     '',
@@ -48,7 +48,7 @@ export function buildSessionInstructions(): string {
     profileText(bones, soul),
     '```',
     '',
-    '(Snapshot from server start — call `companion_get` on first turn for the latest state.)',
+    '(Snapshot from server start — call `companion_get` each turn for the latest state.)',
   ].join('\n')
 }
 
@@ -101,7 +101,7 @@ export function companionSessionPromptDescription(): string {
   if (soul.muted) return 'Companion is muted — skip unless the user asks.'
   const name = soul.name ?? 'your companion'
   return (
-    `**Use at the start of every new conversation.** Wake ${name}: show the ASCII sprite ` +
+    `**Use on every user message.** Wake ${name}: show the ASCII sprite ` +
     'and one greeting line before handling the user request.'
   )
 }

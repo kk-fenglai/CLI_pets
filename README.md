@@ -1,6 +1,6 @@
 # companion-mcp 🦆
 
-A terminal **desk-pet system** for **Claude Code** (and any MCP-capable client).
+A terminal **desk-pet system** for **Cursor**, **Claude Code**, **Codex**, and any MCP-capable client.
 
 Each user gets a unique creature **deterministically** from their seed: species, rarity, hat, eyes, and stats all come from a hash of the seed — tampering with the config file cannot fake a legendary pull. Inspired by this repo's analysis of a leaked Agent CLI (`buddy/` Companion system); **all code is an independent reimplementation**.
 
@@ -31,7 +31,82 @@ npm run build
 
 Build output lives in `dist/`; entry point is `dist/index.js`.
 
-## Connect in Claude Code
+## Connect MCP (all platforms)
+
+Build once:
+
+```powershell
+cd companion-mcp
+npm install
+npm run build
+```
+
+### Cursor
+
+Project files (already in this repo):
+
+| File | Purpose |
+|------|---------|
+| `.cursor/mcp.json` | MCP server |
+| `.cursor/hooks.json` | `sessionStart` → `wake.js --format cursor` |
+| `.cursor/rules/companion-wake.mdc` | Always-on wake rule |
+| `.cursor/skills/companion-buddy/` | Optional skill |
+
+Restart Cursor after changes. MCP: Settings → MCP → `companion` should be green.
+
+### Claude Code
+
+| File | Purpose |
+|------|---------|
+| `.mcp.json` | MCP server (project root) |
+| `.claude/settings.json` | `SessionStart` + `UserPromptSubmit` hooks |
+| `CLAUDE.md` | Wake instructions (re-read each session) |
+| `.claude/skills/companion-buddy/` | Optional skill |
+
+```powershell
+# Or add globally / per project via CLI:
+claude mcp add companion -- node "C:/path/to/companion-mcp/dist/index.js"
+```
+
+### Codex
+
+| File | Purpose |
+|------|---------|
+| `.codex/config.toml` | `[mcp_servers.companion]` |
+| `.codex/hooks.json` | `SessionStart` + `UserPromptSubmit` hooks |
+| `AGENTS.md` | Wake instructions (re-read every turn) |
+
+**Trust the project** in `~/.codex/config.toml` or Codex will ignore project MCP/hooks.
+
+```powershell
+# Or add via CLI:
+codex mcp add companion -- node companion-mcp/dist/index.js
+```
+
+### npx (no local build)
+
+```powershell
+claude mcp add companion -- npx -y companion-mcp
+codex mcp add companion -- npx -y companion-mcp
+```
+
+## Wake hook (`companion-wake`)
+
+`dist/wake.js` injects the live ASCII sprite into agent context via platform hooks:
+
+| Format | Platform | Output |
+|--------|----------|--------|
+| `cursor` | Cursor `sessionStart` | `{ "additional_context": "..." }` |
+| `plain` | Claude Code / Codex hooks | Raw text (stdout) |
+
+```powershell
+node companion-mcp/dist/wake.js --format cursor
+node companion-mcp/dist/wake.js --format plain
+```
+
+Mute: `"muted": true` in `~/.companion-mcp/config.json`.
+
+## Connect in Claude Code (details)
 
 ### Option A: npx (recommended — no clone / no build)
 
@@ -117,7 +192,7 @@ Once connected, try in Claude Code:
 
 When the MCP server connects, it sends **server instructions** to the client
 (Claude Code injects these into `mcp_instructions`). They require waking the
-pet on the first turn of every conversation via `companion_get`, `companion-session`,
+pet on **every user message** via `companion_get`, `companion-session`,
 or `companion://profile`.
 
 ## Configuration
@@ -142,6 +217,8 @@ companion-mcp/
     ├── profile.ts     # shared profile text + greeting helpers
     ├── session.ts     # server instructions + companion-session prompt
     ├── prompts.ts     # companion-voice MCP prompt builder
+    ├── wake-context.ts # shared wake text for cross-platform hooks
+    ├── wake.ts        # hook CLI (Cursor / Claude / Codex)
     └── index.ts       # MCP server entry (stdio)
 ```
 

@@ -18,7 +18,7 @@ function text(s) {
 // ---------------------------------------------------------------------------
 // Server — instructions inject session-start rules into every MCP client
 // ---------------------------------------------------------------------------
-const server = new McpServer({ name: 'companion-mcp', version: '1.0.0' }, { instructions: buildSessionInstructions() });
+const server = new McpServer({ name: 'companion-mcp', version: '1.2.0' }, { instructions: buildSessionInstructions() });
 // Live profile resource (always fresh on read) --------------------------------
 server.registerResource('companion-profile', 'companion://profile', {
     title: 'Companion profile',
@@ -69,7 +69,7 @@ function refreshCompanionMetadata() {
 server.registerTool('companion_get', {
     title: 'Get companion',
     description: 'Show your terminal companion: ASCII sprite, species, rarity, hat and stats. ' +
-        '**Call this at the start of every new conversation** (before other tools). ' +
+        '**Call this on every user message** (before other tools). ' +
         'If unhatched, shows "(unhatched)" — use companion_hatch to name it.',
     inputSchema: {},
 }, async () => {
