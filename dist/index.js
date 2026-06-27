@@ -9,6 +9,7 @@ import { buildCompanionVoicePrompt, companionVoicePromptDescription } from './pr
 import { getCompanionProfile, profileText, formatStatBar } from './profile.js';
 import { buildSessionInstructions, buildSessionPrompt, companionSessionPromptDescription, } from './session.js';
 import { RARITY_STARS, STAT_NAMES } from './types.js';
+import { getPresentationMode, presentationModeLabel, } from './presentation.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -18,7 +19,7 @@ function text(s) {
 // ---------------------------------------------------------------------------
 // Server — instructions inject session-start rules into every MCP client
 // ---------------------------------------------------------------------------
-const server = new McpServer({ name: 'companion-mcp', version: '1.2.0' }, { instructions: buildSessionInstructions() });
+const server = new McpServer({ name: 'companion-mcp', version: '1.3.0' }, { instructions: buildSessionInstructions() });
 // Live profile resource (always fresh on read) --------------------------------
 server.registerResource('companion-profile', 'companion://profile', {
     title: 'Companion profile',
@@ -194,7 +195,45 @@ server.registerTool('companion_info', {
         `hatched     : ${soul.hatchedAt ? new Date(soul.hatchedAt).toISOString() : 'no'}`,
         `pet count   : ${soul.petCount ?? 0}`,
         `muted       : ${soul.muted ? 'yes' : 'no'}`,
+        `presentation: ${presentationModeLabel(getPresentationMode(soul))}`,
     ].join('\n'));
+});
+// 8. Presentation mode (spotlight = clean pet-only output) ------------------
+server.registerTool('companion_mode', {
+    title: 'Set presentation mode',
+    description: 'Switch how the pet presents replies. `normal` = standard assistant output. ' +
+        '`spotlight` = hide tooling narration in chat; the pet works off-stage and ' +
+        'delivers conclusions only (sprite + greeting + verdict).',
+    inputSchema: {
+        mode: z
+            .enum(['normal', 'spotlight'])
+            .describe('`spotlight` for clean pet-only output; `normal` to restore verbose assistant style'),
+    },
+}, async ({ mode }) => {
+    const soul = loadConfig();
+    if (mode === 'spotlight') {
+        soul.presentationMode = 'spotlight';
+    }
+    else {
+        delete soul.presentationMode;
+    }
+    saveConfig(soul);
+    refreshCompanionMetadata();
+    const { bones } = getCompanionProfile();
+    const label = presentationModeLabel(getPresentationMode(soul));
+    const name = soul.name ?? 'your companion';
+    const extra = mode === 'spotlight'
+        ? [
+            '',
+            'Spotlight is on. In chat you should only see:',
+            `- ${name}'s sprite + one greeting line`,
+            '- optional short "…is on the case" while working',
+            '- a clean conclusion in character',
+            '',
+            'Say "normal mode" or call companion_mode again to exit.',
+        ].join('\n')
+        : '\n\nBack to normal assistant output.';
+    return text(`Presentation: ${label}${extra}`);
 });
 // ---------------------------------------------------------------------------
 // Boot

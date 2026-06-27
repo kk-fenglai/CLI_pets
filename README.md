@@ -59,7 +59,7 @@ Restart Cursor after changes. MCP: Settings → MCP → `companion` should be gr
 | File | Purpose |
 |------|---------|
 | `.mcp.json` | MCP server (project root) |
-| `.claude/settings.json` | `SessionStart` + `UserPromptSubmit` hooks |
+| `.claude/settings.json` | `SessionStart` + `UserPromptSubmit` + `PostToolUse` (spotlight) hooks |
 | `CLAUDE.md` | Wake instructions (re-read each session) |
 | `.claude/skills/companion-buddy/` | Optional skill |
 
@@ -73,7 +73,7 @@ claude mcp add companion -- node "C:/path/to/companion-mcp/dist/index.js"
 | File | Purpose |
 |------|---------|
 | `.codex/config.toml` | `[mcp_servers.companion]` |
-| `.codex/hooks.json` | `SessionStart` + `UserPromptSubmit` hooks |
+| `.codex/hooks.json` | `SessionStart` + `UserPromptSubmit` + `PostToolUse` (spotlight) hooks |
 | `AGENTS.md` | Wake instructions (re-read every turn) |
 
 **Trust the project** in `~/.codex/config.toml` or Codex will ignore project MCP/hooks.
@@ -105,6 +105,40 @@ node companion-mcp/dist/wake.js --format plain
 ```
 
 Mute: `"muted": true` in `~/.companion-mcp/config.json`.
+
+## Spotlight mode (clean output)
+
+Hide tooling narration in chat — only the pet's sprite, optional "working" line, and final conclusion.
+
+**Enable** (chat or MCP):
+
+- "开启聚光灯模式" / "spotlight mode" / `companion_mode` with `mode: spotlight`
+
+**Disable**:
+
+- "normal mode" / `companion_mode` with `mode: normal`
+
+Or edit `~/.companion-mcp/config.json`:
+
+```json
+{ "presentationMode": "spotlight" }
+```
+
+**What changes**
+
+| Normal | Spotlight |
+|--------|-----------|
+| Shows tool calls, commands, file paths | Hides all of that in reply text |
+| Standard assistant narration | Pet works off-stage; delivers verdict in character |
+| Wake sprite + greeting | Same wake ritual |
+
+**Cursor hook**: `.cursor/hooks.json` runs `spotlight-nudge.js` on `postToolUse` to reinforce clean output after each tool.
+
+**Claude Code hook**: `.claude/settings.json` → `PostToolUse` → `spotlight-nudge.js --format claude-json`.
+
+**Codex hook**: `.codex/hooks.json` → `PostToolUse` → `spotlight-nudge.js --format codex-json`.
+
+**Limitation**: Cursor may still show tool-call cards in the UI. Spotlight mode controls **assistant reply text** only. For maximum cleanliness, collapse tool sections in the chat UI if your client supports it.
 
 ## Connect in Claude Code (details)
 
@@ -174,6 +208,7 @@ Once connected, try in Claude Code:
 | `companion_render` | Render a specific animation frame (for custom loops) |
 | `companion_reroll` | Change seed and roll a new creature (resets name) |
 | `companion_info` | Show config path and current seed |
+| `companion_mode` | Switch `normal` / `spotlight` presentation |
 
 ## MCP prompts
 
@@ -218,6 +253,9 @@ companion-mcp/
     ├── session.ts     # server instructions + companion-session prompt
     ├── prompts.ts     # companion-voice MCP prompt builder
     ├── wake-context.ts # shared wake text for cross-platform hooks
+    ├── hook-output.ts  # shared hook JSON formatting (Cursor / Claude / Codex)
+    ├── presentation.ts # spotlight (clean output) mode rules
+    ├── spotlight-nudge.ts # Cursor postToolUse hook for spotlight
     ├── wake.ts        # hook CLI (Cursor / Claude / Codex)
     └── index.ts       # MCP server entry (stdio)
 ```

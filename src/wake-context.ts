@@ -1,8 +1,14 @@
 import { getCompanionProfile, profileText, sessionGreetingLine } from './profile.js'
+import { buildSpotlightRules, getPresentationMode } from './presentation.js'
 import { loadConfig } from './store.js'
 
-export type WakeFormat = 'cursor' | 'plain' | 'claude-json' | 'codex-json'
-export type WakeEvent = 'SessionStart' | 'UserPromptSubmit'
+import type { HookEvent, HookFormat } from './hook-output.js'
+import { formatHookOutput, parseHookArgs } from './hook-output.js'
+
+export type WakeFormat = HookFormat
+export type WakeEvent = HookEvent
+
+export { formatHookOutput as formatWakeOutput, parseHookArgs as parseWakeArgs }
 
 /** Build the desk-pet wake text injected by hooks. Returns null when muted. */
 export function buildWakeContext(): string | null {
@@ -12,6 +18,11 @@ export function buildWakeContext(): string | null {
   const { bones } = getCompanionProfile()
   const greeting = sessionGreetingLine(soul)
   const sprite = profileText(bones, soul)
+
+  const spotlight =
+    getPresentationMode(soul) === 'spotlight'
+      ? ['', buildSpotlightRules(soul, bones), '']
+      : []
 
   return [
     '# REQUIRED — wake the desk pet now',
@@ -23,50 +34,7 @@ export function buildWakeContext(): string | null {
     `Then add exactly one line: "${greeting}"`,
     '',
     'Do not skip. Do not summarize the sprite — paste it verbatim.',
+    ...spotlight,
     'Then handle the user request normally.',
   ].join('\n')
-}
-
-export function formatWakeOutput(
-  context: string | null,
-  format: WakeFormat,
-  event: WakeEvent = 'SessionStart',
-): string {
-  if (!context) {
-    return format === 'cursor' ? '{}' : ''
-  }
-
-  if (format === 'cursor') {
-    return JSON.stringify({ additional_context: context })
-  }
-
-  if (format === 'claude-json' || format === 'codex-json') {
-    return JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: event,
-        additionalContext: context,
-      },
-    })
-  }
-
-  return context
-}
-
-export function parseWakeArgs(argv: string[]): { format: WakeFormat; event: WakeEvent } {
-  let format: WakeFormat = 'cursor'
-  let event: WakeEvent = 'SessionStart'
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === '--format' && argv[i + 1]) {
-      format = argv[++i] as WakeFormat
-    } else if (arg === '--event' && argv[i + 1]) {
-      event = argv[++i] as WakeEvent
-    }
-  }
-
-  const envFormat = process.env.COMPANION_WAKE_FORMAT as WakeFormat | undefined
-  if (envFormat) format = envFormat
-
-  return { format, event }
 }

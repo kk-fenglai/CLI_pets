@@ -1,4 +1,5 @@
 import { getCompanionProfile, profileText, sessionGreetingLine } from './profile.js';
+import { buildSpotlightRules, getPresentationMode } from './presentation.js';
 import { loadConfig } from './store.js';
 const SESSION_RULES = `## REQUIRED — every user message
 
@@ -27,12 +28,14 @@ export function buildSessionInstructions() {
             'The user has **muted** the desk pet. Do not greet or summon it until they ask.',
         ].join('\n');
     }
+    const spotlight = getPresentationMode(soul) === 'spotlight' ? ['', buildSpotlightRules(soul, bones), ''] : [];
     return [
         '# Terminal desk pet (companion-mcp)',
         '',
         'A small ASCII creature lives in this coding session. You must wake it on every user message.',
         '',
         SESSION_RULES,
+        ...spotlight,
         '',
         '### Suggested greeting',
         '',
@@ -93,6 +96,9 @@ export function companionSessionPromptDescription() {
     if (soul.muted)
         return 'Companion is muted — skip unless the user asks.';
     const name = soul.name ?? 'your companion';
+    const mode = getPresentationMode(soul) === 'spotlight'
+        ? ' **Spotlight mode** — hide tooling; pet delivers conclusions only.'
+        : '';
     return (`**Use on every user message.** Wake ${name}: show the ASCII sprite ` +
-        'and one greeting line before handling the user request.');
+        `and one greeting line before handling the user request.${mode}`);
 }

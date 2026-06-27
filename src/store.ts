@@ -13,6 +13,8 @@ export type StoredConfig = {
   // UX state.
   muted?: boolean
   petCount?: number
+  /** `spotlight` = hide tooling narration; pet delivers conclusions only. */
+  presentationMode?: 'normal' | 'spotlight'
 }
 
 const CONFIG_DIR =
